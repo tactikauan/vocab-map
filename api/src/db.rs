@@ -9,3 +9,9 @@ pub fn establish_connection() -> PgConnection {
     PgConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
+
+#[derive(Debug, diesel_derive_enum::DbEnum)]
+#[db_enum(existing_type_path = "crate::schema::sql_types::Language")]
+pub enum Language {
+    En,
+}
