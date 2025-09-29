@@ -31,6 +31,7 @@ pub fn predict_from_word(word_to_predict: &str, count: i64) -> Result<Vec<String
     while let Some(w) = related_words.pop() {
         words.push(w.word);
     }
+    words.reverse();
 
     Ok(words)
 }
