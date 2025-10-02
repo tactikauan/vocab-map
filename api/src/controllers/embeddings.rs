@@ -10,12 +10,14 @@ async fn predict(req: HttpRequest) -> impl Responder {
     #[derive(Deserialize)]
     struct Params {
         count: Option<i64>,
+        vocab: Option<String>,
     }
 
     let params = web::Query::<Params>::from_query(req.query_string()).unwrap();
     let count = params.count.unwrap_or_else(|| 30);
+    let vocab_only = params.vocab.is_some();
 
-    let words = match embeddings::predict_from_word(&word, count) {
+    let words = match embeddings::predict_from_word(&word, count, vocab_only) {
         Ok(words) => words,
         Err(e) => return HttpResponse::InternalServerError().json(response::message(e)),
     };
