@@ -2,6 +2,7 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 mod controller;
 mod db;
+mod graph;
 mod models;
 mod repository;
 mod schema;
