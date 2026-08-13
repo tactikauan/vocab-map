@@ -1,9 +1,23 @@
+use serde::{self, ser::SerializeStruct, ser::SerializeTuple};
 use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Graph {
     nodes: Vec<Rc<GraphNode>>,
     edges: Vec<GraphEdge>,
+}
+
+impl serde::Serialize for Graph {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Graph", 2)?;
+        let nodes: Vec<&GraphNode> = self.nodes.iter().map(|node| node.as_ref()).collect();
+        state.serialize_field("nodes", &nodes)?;
+        state.serialize_field("edges", &self.edges)?;
+        state.end()
+    }
 }
 
 impl Graph {
@@ -18,12 +32,7 @@ impl Graph {
         self.nodes.iter().find(|node| node.id == id)
     }
 
-    pub fn add_node(&mut self, word: &str, adjacent_nodes: Vec<u32>) {
-        let id = match self.nodes.last() {
-            Some(node) => node.id + 1,
-            None => 1,
-        };
-
+    pub fn add_node(&mut self, id: u32, word: &str, adjacent_nodes: Vec<u32>) {
         let new_node = Rc::new(GraphNode {
             id,
             word: String::from(word),
@@ -73,7 +82,7 @@ impl Graph {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub struct GraphNode {
     id: u32,
     word: String,
@@ -82,4 +91,16 @@ pub struct GraphNode {
 #[derive(Debug)]
 struct GraphEdge {
     nodes: (Rc<GraphNode>, Rc<GraphNode>),
+}
+
+impl serde::Serialize for GraphEdge {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        tuple.serialize_element(&self.nodes.0.id);
+        tuple.serialize_element(&self.nodes.1.id);
+        tuple.end()
+    }
 }
