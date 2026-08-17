@@ -2,8 +2,8 @@ use std::vec;
 
 use crate::db::Language;
 use crate::models::{Embedding, Vocab};
-use crate::schema::user_vocab::{self};
-use crate::{db, schema, services};
+use crate::schema::{embeddings, user_vocab, vocab};
+use crate::{db, services};
 
 use diesel::dsl::{delete, insert_into};
 use diesel::prelude::*;
@@ -13,12 +13,10 @@ use linfa_tsne::TSneParams;
 use ndarray::Array2;
 
 pub fn get_user(user_id: i32) -> Result<Vec<String>, &'static str> {
-    use self::schema::vocab::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let Ok(mut words) = vocab
-        .inner_join(user_vocab::table.on(id.eq(user_vocab::vocab)))
+    let Ok(mut words) = vocab::table
+        .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
         .filter(user_vocab::user.eq(user_id))
         .select(Vocab::as_select())
         .load(connection)
@@ -43,13 +41,11 @@ pub struct ProjectedWord {
 }
 
 pub fn get_user_projected(user_id: i32) -> Result<Vec<ProjectedWord>, &'static str> {
-    use self::schema::embeddings::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let Ok(words): Result<Vec<Embedding>, _> = embeddings
-        .inner_join(schema::vocab::table.on(word.eq(schema::vocab::word)))
-        .inner_join(user_vocab::table.on(schema::vocab::id.eq(user_vocab::vocab)))
+    let Ok(words): Result<Vec<Embedding>, _> = embeddings::table
+        .inner_join(vocab::table.on(embeddings::word.eq(vocab::word)))
+        .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
         .filter(user_vocab::user.eq(user_id))
         .select(Embedding::as_select())
         .load(connection)
@@ -95,20 +91,18 @@ pub fn get_user_projected(user_id: i32) -> Result<Vec<ProjectedWord>, &'static s
 }
 
 pub fn add_user(word: &str, user_id: i32) -> Result<&'static str, &'static str> {
-    use self::schema::user_vocab::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let Ok(word) = schema::vocab::table
-        .filter(schema::vocab::word.eq(word))
+    let Ok(word) = vocab::table
+        .filter(vocab::word.eq(word))
         .select(Vocab::as_select())
         .first(connection)
     else {
         return Err("Could not find word");
     };
 
-    let result = insert_into(user_vocab)
-        .values((vocab.eq(word.id), user.eq(user_id)))
+    let result = insert_into(user_vocab::table)
+        .values((user_vocab::vocab.eq(word.id), user_vocab::user.eq(user_id)))
         .execute(connection);
 
     if result.is_err() {
@@ -119,8 +113,6 @@ pub fn add_user(word: &str, user_id: i32) -> Result<&'static str, &'static str> 
 }
 
 pub fn add_user_from_words(words: Vec<String>, user_id: i32) -> Result<String, &'static str> {
-    use self::schema::user_vocab::dsl::*;
-
     let connection = &mut db::establish_connection();
 
     let Ok(mut words_to_add) = services::embeddings::predict_from_words(words, 1, false, user_id)
@@ -130,18 +122,15 @@ pub fn add_user_from_words(words: Vec<String>, user_id: i32) -> Result<String, &
 
     let word_to_add = words_to_add.pop().unwrap();
 
-    let word = match schema::vocab::table
-        .filter(schema::vocab::word.eq(&word_to_add))
+    let word = match vocab::table
+        .filter(vocab::word.eq(&word_to_add))
         .select(Vocab::as_select())
         .first(connection)
     {
         Ok(word) => word,
         Err(_) => {
-            let result: Vocab = insert_into(schema::vocab::table)
-                .values((
-                    schema::vocab::word.eq(&word_to_add),
-                    schema::vocab::lang.eq(Language::En),
-                ))
+            let result: Vocab = insert_into(vocab::table)
+                .values((vocab::word.eq(&word_to_add), vocab::lang.eq(Language::En)))
                 .get_result(connection)
                 .unwrap();
 
@@ -149,8 +138,8 @@ pub fn add_user_from_words(words: Vec<String>, user_id: i32) -> Result<String, &
         }
     };
 
-    let result = insert_into(user_vocab)
-        .values((vocab.eq(word.id), user.eq(user_id)))
+    let result = insert_into(user_vocab::table)
+        .values((user_vocab::vocab.eq(word.id), user_vocab::user.eq(user_id)))
         .execute(connection);
 
     if result.is_err() {
@@ -161,19 +150,17 @@ pub fn add_user_from_words(words: Vec<String>, user_id: i32) -> Result<String, &
 }
 
 pub fn delete_user_words(words: Vec<String>, user_id: i32) -> Result<&'static str, &'static str> {
-    use self::schema::user_vocab::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let result = delete(user_vocab)
+    let result = delete(user_vocab::table)
         .filter(
-            vocab.eq_any(
-                schema::vocab::table
-                    .filter(schema::vocab::word.eq_any(words))
-                    .select(schema::vocab::id),
+            user_vocab::vocab.eq_any(
+                vocab::table
+                    .filter(vocab::word.eq_any(words))
+                    .select(vocab::id),
             ),
         )
-        .filter(user.eq(user_id))
+        .filter(user_vocab::user.eq(user_id))
         .execute(connection);
 
     if result.is_err() {
@@ -184,12 +171,10 @@ pub fn delete_user_words(words: Vec<String>, user_id: i32) -> Result<&'static st
 }
 
 pub fn search(search: &str) -> Result<Vec<String>, &'static str> {
-    use self::schema::vocab::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let Ok(mut words) = vocab
-        .filter(word.ilike(format!("{}%", search)))
+    let Ok(mut words) = vocab::table
+        .filter(vocab::word.ilike(format!("{}%", search)))
         .limit(20)
         .select(Vocab::as_select())
         .load(connection)

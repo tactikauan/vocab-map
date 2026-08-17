@@ -1,5 +1,6 @@
 use crate::models::User;
-use crate::{db, schema, utils};
+use crate::schema::user;
+use crate::{db, utils};
 
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, SelectableHelper};
@@ -7,12 +8,10 @@ use jwt::SignWithKey;
 use std::collections::BTreeMap;
 
 pub fn auth(username: &str, password: &str) -> Result<String, &'static str> {
-    use self::schema::user::dsl::*;
-
     let connection = &mut db::establish_connection();
 
-    let Ok(user_entity) = user
-        .filter(name.eq(username))
+    let Ok(user_entity) = user::table
+        .filter(user::name.eq(username))
         .select(User::as_select())
         .first(connection)
     else {
