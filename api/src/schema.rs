@@ -10,7 +10,7 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    embeddings (word) {
+    embedding (word) {
         word -> Varchar,
         vector -> Vector,
     }
@@ -51,4 +51,4 @@ diesel::table! {
 diesel::joinable!(user_vocab -> user (user));
 diesel::joinable!(user_vocab -> vocab (vocab));
 
-diesel::allow_tables_to_appear_in_same_query!(embeddings, user, user_vocab, vocab,);
+diesel::allow_tables_to_appear_in_same_query!(embedding, user, user_vocab, vocab,);

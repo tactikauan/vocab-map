@@ -2,7 +2,7 @@ use std::vec;
 
 use crate::db::Language;
 use crate::models::{Embedding, Vocab};
-use crate::schema::{embeddings, user_vocab, vocab};
+use crate::schema::{embedding, user_vocab, vocab};
 use crate::{db, services};
 
 use diesel::dsl::{delete, insert_into};
@@ -43,8 +43,8 @@ pub struct ProjectedWord {
 pub fn get_user_projected(user_id: i32) -> Result<Vec<ProjectedWord>, &'static str> {
     let connection = &mut db::establish_connection();
 
-    let Ok(words): Result<Vec<Embedding>, _> = embeddings::table
-        .inner_join(vocab::table.on(embeddings::word.eq(vocab::word)))
+    let Ok(words): Result<Vec<Embedding>, _> = embedding::table
+        .inner_join(vocab::table.on(embedding::word.eq(vocab::word)))
         .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
         .filter(user_vocab::user.eq(user_id))
         .select(Embedding::as_select())

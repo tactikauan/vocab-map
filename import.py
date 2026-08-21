@@ -27,7 +27,7 @@ def main():
                     word = values[0]
                     vector = list(map(float, values[1:]))
                     params_list.append([word, vector])
-                cursor.executemany("INSERT INTO embeddings (word, vector) VALUES (%s, %s)", params_list)
+                cursor.executemany("INSERT INTO embedding (word, vector) VALUES (%s, %s)", params_list)
         
     conn.commit()
 

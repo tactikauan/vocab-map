@@ -1,6 +1,6 @@
 use crate::db;
 use crate::models::Embedding;
-use crate::schema::{embeddings, user_vocab, vocab};
+use crate::schema::{embedding, user_vocab, vocab};
 
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, SelectableHelper};
@@ -13,17 +13,17 @@ pub fn predict_from_word(
 ) -> Result<Vec<String>, &str> {
     let connection = &mut db::establish_connection();
 
-    let Ok(embedding) = embeddings::table
-        .filter(embeddings::word.eq(word_to_predict))
+    let Ok(embedding) = embedding::table
+        .filter(embedding::word.eq(word_to_predict))
         .select(Embedding::as_select())
         .first(connection)
     else {
         return Err("Word not found");
     };
 
-    let mut query = embeddings::table
-        .left_join(vocab::table.on(embeddings::word.ilike(vocab::word)))
-        .order_by(embeddings::vector.l2_distance(embedding.vector))
+    let mut query = embedding::table
+        .left_join(vocab::table.on(embedding::word.ilike(vocab::word)))
+        .order_by(embedding::vector.l2_distance(embedding.vector))
         .limit(count)
         .select(Embedding::as_select())
         .into_boxed();
@@ -56,8 +56,8 @@ pub fn predict_from_words(
     let mut vecs = vec![];
 
     for w in words.iter() {
-        let Ok(embedding) = embeddings::table
-            .filter(embeddings::word.eq(w))
+        let Ok(embedding) = embedding::table
+            .filter(embedding::word.eq(w))
             .select(Embedding::as_select())
             .first(connection)
         else {
@@ -71,14 +71,14 @@ pub fn predict_from_words(
         .reduce(|a, b| a.iter().zip(b.iter()).map(|(&a, &b)| a + b).collect())
         .unwrap();
 
-    let mut query = embeddings::table
-        .left_join(vocab::table.on(embeddings::word.ilike(vocab::word)))
+    let mut query = embedding::table
+        .left_join(vocab::table.on(embedding::word.ilike(vocab::word)))
         .left_join(
             user_vocab::table.on(vocab::id
                 .eq(user_vocab::vocab)
                 .and(user_vocab::user.eq(user_id))),
         )
-        .order_by(embeddings::vector.l2_distance(Vector::from(sum)))
+        .order_by(embedding::vector.l2_distance(Vector::from(sum)))
         .limit(count)
         .select(Embedding::as_select())
         .into_boxed();
