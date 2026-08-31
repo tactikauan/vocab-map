@@ -17,6 +17,18 @@ async fn get(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok().json(words)
 }
 
+async fn get_graph(req: HttpRequest) -> impl Responder {
+    let Some(user_id) = get_user_id(req.headers()) else {
+        return HttpResponse::Unauthorized().json(response::message("Unauthorized"));
+    };
+
+    let Ok(graph) = vocab::get_user_graph(user_id) else {
+        return HttpResponse::InternalServerError().json(response::message("Could not find words"));
+    };
+
+    HttpResponse::Ok().json(graph)
+}
+
 async fn get_projected(req: HttpRequest) -> impl Responder {
     let Some(user_id) = get_user_id(req.headers()) else {
         return HttpResponse::Unauthorized().json(response::message("Unauthorized"));
@@ -91,6 +103,7 @@ async fn search(req: HttpRequest) -> impl Responder {
 pub fn create_scope() -> Scope {
     web::scope("/vocab")
         .route("", web::get().to(get))
+        .route("/graph", web::get().to(get_graph))
         .route("/projected", web::get().to(get_projected))
         .route("/add/{word}", web::put().to(add))
         .route("/add", web::post().to(add_from_words))

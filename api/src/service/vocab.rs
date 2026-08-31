@@ -1,8 +1,11 @@
 use std::vec;
 
 use crate::db::Language;
+use crate::graph::Graph;
 use crate::{repository, service};
 
+use diesel::RunQueryDsl;
+use diesel::prelude::*;
 use linfa::traits::Transformer;
 use linfa_tsne::TSneParams;
 use ndarray::Array2;
@@ -11,6 +14,35 @@ pub fn get_user(user_id: i32) -> Result<Vec<String>, &'static str> {
     let words = repository::vocab::get_by_user(user_id)?;
     Ok(words.into_iter().map(|vocab| vocab.word).collect())
 }
+
+pub fn get_user_graph(user_id: i32) -> Result<Graph, &'static str> {
+    let words = repository::vocab::get_by_user(user_id)?;
+
+    let mut graph = Graph::new();
+    for word in words {
+        graph.add_node(word.id.cast_unsigned(), word.word.as_str(), vec![]);
+    }
+
+    Ok(graph)
+}
+
+/*fn get_distances_by_user(user_id: i32) -> Result<Vec<(Vocab, f32)>, diesel::result::Error> {
+    //use self::schema::vocab::dsl::*;
+    use self::schema::embeddings;
+    use self::schema::vocab;
+
+    let connection = &mut db::establish_connection();
+
+    let result = vocab::table
+        .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
+        .filter(user_vocab::user.eq(user_id))
+        .select((
+            vocab::id,
+            vocab::word,
+            embeddings::vector.l2_distance(Vector::from(sum)),
+        ))
+        .load(connection);
+}*/
 
 #[derive(serde::Serialize)]
 pub struct ProjectedWord {
