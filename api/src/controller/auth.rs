@@ -1,5 +1,5 @@
-use crate::services::users;
-use crate::utils::response;
+use crate::service::users;
+use crate::util::response;
 
 use actix_web::{HttpResponse, Responder, Scope, web};
 use serde::Deserialize;

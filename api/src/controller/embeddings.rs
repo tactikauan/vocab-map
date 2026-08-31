@@ -1,5 +1,5 @@
-use crate::services::embeddings;
-use crate::utils::response;
+use crate::service::embeddings;
+use crate::util::response;
 
 use actix_web::{HttpRequest, HttpResponse, Responder, Scope, web};
 use serde::Deserialize;

@@ -3,7 +3,7 @@ use std::vec;
 use crate::db::Language;
 use crate::models::{Embedding, Vocab};
 use crate::schema::{embedding, user_vocab, vocab};
-use crate::{db, services};
+use crate::{db, service};
 
 use diesel::dsl::{delete, insert_into};
 use diesel::prelude::*;
@@ -115,7 +115,7 @@ pub fn add_user(word: &str, user_id: i32) -> Result<&'static str, &'static str> 
 pub fn add_user_from_words(words: Vec<String>, user_id: i32) -> Result<String, &'static str> {
     let connection = &mut db::establish_connection();
 
-    let Ok(mut words_to_add) = services::embeddings::predict_from_words(words, 1, false, user_id)
+    let Ok(mut words_to_add) = service::embeddings::predict_from_words(words, 1, false, user_id)
     else {
         return Err("Could not predict word");
     };

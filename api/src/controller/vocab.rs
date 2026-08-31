@@ -1,6 +1,6 @@
-use crate::services::vocab;
-use crate::utils::response;
-use crate::utils::token::get_user_id;
+use crate::service::vocab;
+use crate::util::response;
+use crate::util::token::get_user_id;
 
 use actix_web::{HttpRequest, HttpResponse, Responder, Scope, web};
 use serde::Deserialize;

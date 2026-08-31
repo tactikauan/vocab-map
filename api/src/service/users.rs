@@ -1,6 +1,6 @@
 use crate::models::User;
 use crate::schema::user;
-use crate::{db, utils};
+use crate::{db, util};
 
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, SelectableHelper};
@@ -19,7 +19,7 @@ pub fn auth(username: &str, password: &str) -> Result<String, &'static str> {
     };
 
     Ok(create_token(user_entity)
-        .sign_with_key(&utils::token::get_key())
+        .sign_with_key(&util::token::get_key())
         .unwrap())
 }
 
