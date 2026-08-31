@@ -18,7 +18,7 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_header(),
             )
             .service(controller::auth::create_scope())
-            .service(controller::embeddings::create_scope())
+            .service(controller::embedding::create_scope())
             .service(controller::vocab::create_scope())
     })
     .bind(("localhost", 8080))?

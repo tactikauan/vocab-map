@@ -1,3 +1,3 @@
 pub mod auth;
-pub mod embeddings;
+pub mod embedding;
 pub mod vocab;

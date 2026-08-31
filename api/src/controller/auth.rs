@@ -1,4 +1,4 @@
-use crate::service::users;
+use crate::service::user;
 use crate::util::response;
 
 use actix_web::{HttpResponse, Responder, Scope, web};
@@ -11,7 +11,7 @@ struct AuthParams {
 }
 
 async fn auth(params: web::Json<AuthParams>) -> impl Responder {
-    let token = match users::auth(&params.username, &params.password) {
+    let token = match user::auth(&params.username, &params.password) {
         Ok(token) => token,
         Err(e) => return HttpResponse::InternalServerError().json(response::message(e)),
     };

@@ -1,3 +1,3 @@
-pub mod embeddings;
-pub mod users;
+pub mod embedding;
+pub mod user;
 pub mod vocab;

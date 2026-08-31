@@ -1,4 +1,4 @@
-use crate::service::embeddings;
+use crate::service::embedding;
 use crate::util::response;
 
 use actix_web::{HttpRequest, HttpResponse, Responder, Scope, web};
@@ -17,7 +17,7 @@ async fn predict(req: HttpRequest) -> impl Responder {
     let count = params.count.unwrap_or_else(|| 30);
     let vocab_only = params.vocab.is_some();
 
-    let words = match embeddings::predict_from_word(&word, count, vocab_only) {
+    let words = match embedding::predict_from_word(&word, count, vocab_only) {
         Ok(words) => words,
         Err(e) => return HttpResponse::InternalServerError().json(response::message(e)),
     };
@@ -26,5 +26,5 @@ async fn predict(req: HttpRequest) -> impl Responder {
 }
 
 pub fn create_scope() -> Scope {
-    web::scope("/embeddings").route("/predict/{word}", web::get().to(predict))
+    web::scope("/embedding").route("/predict/{word}", web::get().to(predict))
 }
