@@ -1,11 +1,12 @@
 use crate::db;
 use crate::db::Language;
 use crate::models::Vocab;
-use crate::schema::{user_vocab, vocab};
+use crate::schema::{embedding, user_vocab, vocab};
 
 use diesel::dsl::{delete, insert_into};
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, SelectableHelper};
+use pgvector::{Vector, VectorExpressionMethods};
 
 pub fn insert(word: &str, lang: Language) -> Result<Vocab, &'static str> {
     let connection = &mut db::establish_connection();
@@ -75,4 +76,26 @@ pub fn search(search: &str, limit: i64) -> Result<Vec<Vocab>, &'static str> {
         .select(Vocab::as_select())
         .load(connection)
         .or(Err("Could not load vocab"));
+}
+
+pub fn get_distances_by_user_and_vec(
+    user_id: i32,
+    vec: Vec<f32>,
+    word: &str,
+    limit: u32,
+) -> Result<Vec<(Vocab, f64)>, &'static str> {
+    let connection = &mut db::establish_connection();
+
+    let distance_query = embedding::vector.l2_distance(Vector::from(vec));
+
+    vocab::table
+        .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
+        .inner_join(embedding::table.on(vocab::word.eq(embedding::word)))
+        .filter(user_vocab::user.eq(user_id))
+        .filter(vocab::word.not_ilike(word))
+        .limit(limit as i64)
+        .select((Vocab::as_select(), &distance_query))
+        .order_by(&distance_query)
+        .load(connection)
+        .or(Err("Could not get distances"))
 }

@@ -2,10 +2,9 @@ use std::vec;
 
 use crate::db::Language;
 use crate::graph::Graph;
+use crate::models::Vocab;
 use crate::{repository, service};
 
-use diesel::RunQueryDsl;
-use diesel::prelude::*;
 use linfa::traits::Transformer;
 use linfa_tsne::TSneParams;
 use ndarray::Array2;
@@ -20,10 +19,54 @@ pub fn get_user_graph(user_id: i32) -> Result<Graph, &'static str> {
 
     let mut graph = Graph::new();
     for word in words {
-        graph.add_node(word.id.cast_unsigned(), word.word.as_str(), vec![]);
+        let distances = repository::vocab::get_distances_by_user_and_vec(
+            user_id,
+            repository::embedding::get_vec_by_word(&word.word)?,
+            word.word.as_str(),
+            3,
+        )?;
+
+        println!("{:?}", word.word);
+        println!("{:?}", distances);
+
+        let graph_connections = eval_connections_by_distances(&distances);
+        let edges_to_add = distances[..graph_connections as usize]
+            .iter()
+            .map(|(word, _)| word.id as u32)
+            .collect::<Vec<u32>>();
+
+        graph.add_node(word.id.cast_unsigned(), word.word.as_str(), &edges_to_add);
     }
 
     Ok(graph)
+}
+
+fn eval_connections_by_distances(distances: &[(Vocab, f64)]) -> u32 {
+    if distances.len() == 0 {
+        return 0;
+    }
+
+    let mut connections = 0;
+
+    let mut prev_distance = distances[0].1;
+    for (vocab, distance) in distances {
+        let rel_diff = (distance - prev_distance) / distance;
+        if rel_diff > 0.2 {
+            println!(
+                "not adding connection to {:?} distance: {} relative diff: {}",
+                vocab.word, distance, rel_diff
+            );
+            break;
+        }
+        println!(
+            "adding connection to {:?} distance: {} relative diff: {}",
+            vocab.word, distance, rel_diff
+        );
+        prev_distance = *distance;
+        connections += 1;
+    }
+
+    connections
 }
 
 /*fn get_distances_by_user(user_id: i32) -> Result<Vec<(Vocab, f32)>, diesel::result::Error> {

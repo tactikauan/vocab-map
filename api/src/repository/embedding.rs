@@ -58,3 +58,17 @@ pub fn get_by_user(user_id: i32) -> Result<Vec<Embedding>, &'static str> {
         .load(connection)
         .or(Err("Could not load vocab"))
 }
+
+pub fn get_vec_by_word(word: &str) -> Result<Vec<f32>, &'static str> {
+    let connection = &mut db::establish_connection();
+
+    let Ok(vector) = embedding::table
+        .filter(embedding::word.eq(word))
+        .select(embedding::vector)
+        .first::<Vector>(connection)
+    else {
+        return Err("Could not get vector");
+    };
+
+    Ok(vector.to_vec())
+}

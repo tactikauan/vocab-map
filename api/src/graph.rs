@@ -32,7 +32,7 @@ impl Graph {
         self.nodes.iter().find(|node| node.id == id)
     }
 
-    pub fn add_node(&mut self, id: u32, word: &str, adjacent_nodes: Vec<u32>) {
+    pub fn add_node(&mut self, id: u32, word: &str, adjacent_nodes: &[u32]) {
         let new_node = Rc::new(GraphNode {
             id,
             word: String::from(word),
