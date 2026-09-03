@@ -6,98 +6,43 @@ use diesel::prelude::*;
 use diesel::{RunQueryDsl, SelectableHelper};
 use pgvector::{Vector, VectorExpressionMethods};
 
-pub fn predict_from_word(
-    word_to_predict: &str,
-    count: i64,
-    vocab_only: bool,
-) -> Result<Vec<String>, &str> {
+pub fn get_by_word(word: &str) -> Result<Embedding, &'static str> {
     let connection = &mut db::establish_connection();
 
-    let Ok(embedding) = embedding::table
-        .filter(embedding::word.eq(word_to_predict))
+    embedding::table
+        .filter(embedding::word.eq(word))
         .select(Embedding::as_select())
         .first(connection)
-    else {
-        return Err("Word not found");
-    };
-
-    let mut query = embedding::table
-        .left_join(vocab::table.on(embedding::word.ilike(vocab::word)))
-        .order_by(embedding::vector.l2_distance(embedding.vector))
-        .limit(count)
-        .select(Embedding::as_select())
-        .into_boxed();
-
-    if vocab_only {
-        query = query.filter(vocab::id.is_not_null());
-    }
-
-    let Ok(mut related_words) = query.load(connection) else {
-        return Err("Could not find words");
-    };
-
-    let mut words = vec![];
-    while let Some(w) = related_words.pop() {
-        words.push(w.word);
-    }
-    words.reverse();
-
-    Ok(words)
+        .or(Err("Word not found"))
 }
 
-pub fn predict_from_words(
-    words: Vec<String>,
+pub fn get_closest_words(
+    vec: &[f32],
     count: i64,
     vocab_only: bool,
-    user_id: i32,
+    user_id: Option<i32>,
 ) -> Result<Vec<String>, &'static str> {
     let connection = &mut db::establish_connection();
-
-    let mut vecs = vec![];
-
-    for w in words.iter() {
-        let Ok(embedding) = embedding::table
-            .filter(embedding::word.eq(w))
-            .select(Embedding::as_select())
-            .first(connection)
-        else {
-            return Err("Word not found");
-        };
-        vecs.push(embedding.vector.to_vec());
-    }
-
-    let sum = vecs
-        .into_iter()
-        .reduce(|a, b| a.iter().zip(b.iter()).map(|(&a, &b)| a + b).collect())
-        .unwrap();
 
     let mut query = embedding::table
         .left_join(vocab::table.on(embedding::word.ilike(vocab::word)))
         .left_join(
             user_vocab::table.on(vocab::id
                 .eq(user_vocab::vocab)
-                .and(user_vocab::user.eq(user_id))),
+                .and(user_vocab::user.eq(user_id.unwrap_or(0)))),
         )
-        .order_by(embedding::vector.l2_distance(Vector::from(sum)))
+        .order_by(embedding::vector.l2_distance(Vector::from(vec.to_vec())))
         .limit(count)
-        .select(Embedding::as_select())
+        .select(embedding::word)
         .into_boxed();
 
     if vocab_only {
         query = query.filter(vocab::id.is_not_null());
     }
 
-    query = query.filter(user_vocab::user.is_null());
-
-    let Ok(mut related_words) = query.load(connection) else {
-        return Err("Could not find words");
-    };
-
-    let mut words = vec![];
-    while let Some(w) = related_words.pop() {
-        words.push(w.word);
+    if user_id.is_some() {
+        query = query.filter(user_vocab::user.is_null());
     }
-    words.reverse();
 
-    Ok(words)
+    query.load(connection).or(Err("Could not find words"))
 }
