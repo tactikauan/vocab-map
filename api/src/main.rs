@@ -3,6 +3,7 @@ use actix_web::{App, HttpServer};
 mod controller;
 mod db;
 mod models;
+mod repository;
 mod schema;
 mod service;
 mod util;
