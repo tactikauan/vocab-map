@@ -1,3 +1,3 @@
 pub mod embedding;
-pub use crate::repository::user;
+pub mod user;
 pub use crate::repository::vocab;
