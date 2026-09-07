@@ -46,3 +46,15 @@ pub fn get_closest_words(
 
     query.load(connection).or(Err("Could not find words"))
 }
+
+pub fn get_by_user(user_id: i32) -> Result<Vec<Embedding>, &'static str> {
+    let connection = &mut db::establish_connection();
+
+    embedding::table
+        .inner_join(vocab::table.on(embedding::word.eq(vocab::word)))
+        .inner_join(user_vocab::table.on(vocab::id.eq(user_vocab::vocab)))
+        .filter(user_vocab::user.eq(user_id))
+        .select(Embedding::as_select())
+        .load(connection)
+        .or(Err("Could not load vocab"))
+}
